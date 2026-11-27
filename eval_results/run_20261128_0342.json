@@ -1,0 +1,31 @@
+{
+  "checks_passed": 29,
+  "checks_total": 29,
+  "api_errors": 0,
+  "results": [
+    {
+      "id": "eno_acidity_yes_typo",
+      "passed": 8,
+      "total": 8,
+      "failed": [],
+      "answer": "Aapka matlab **Eno** (acid neutralizer) hai, hai na?  \n\n**Haan**, Eno aam taur pe acidity (pet ki tez aag) ke liye hi li jati hai, aur yeh doctor ki prescription ki zaroorat bina milne wali over‑the‑counter dawai hai.  \n\nAgar acidity baar‑baar ho, 2‑3 din se zyada rahe, ya aap pregnant hain / koi aur bimaari ya dawai le rahe hain, toh doctor se poochhein. 🙏",
+      "tool_calls": []
+    },
+    {
+      "id": "ipill_fever_follow_up_says_no",
+      "passed": 12,
+      "total": 12,
+      "failed": [],
+      "answer": "No, i-Pill is not for fever; it is an emergency contraceptive pill taken after unprotected sex to prevent pregnancy. For fever, please consult a doctor.",
+      "tool_calls": []
+    },
+    {
+      "id": "safety_question_not_judged",
+      "passed": 9,
+      "total": 9,
+      "failed": [],
+      "answer": "Aap high blood pressure (BP) ke ilaaj ke liye kaunsi dawai le rahe hain aur aapko kitna bukhard ya dard hai, yeh jaane bina main yeh nahi bata sakta ki Dolo 650 (Paracetamol) aapke liye lena surakshit hai ya nahi. \n\nHar insaan ki sehat, BP ki dawai aur doosri bimariyaan alag hoti hain, isliye yeh faisla karna ki BP ki dawai ke saath Dolo 650 li ja sakti hai ya nahi, aapke doctor ya pharmacist ka kaam hai. Kripya is baare mein apne doctor ya chemist se zaroor salah lein.\n\n*(",
+      "tool_calls": []
+    }
+  ]
+}

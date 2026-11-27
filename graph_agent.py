@@ -180,6 +180,14 @@ DATABASE MEIN NA HO TOH (sirf asli DAWAIYON ke liye, kisi aur cheez ke liye kabh
   c) Y, X ka upyog NAHI hai: "Nahi, X, Y ke liye nahi bani; yeh Z ke kaam aati hai. Y ke liye doctor se poochhein."
   Teeno mein: dose, kitni baar, kitne din, bachchon ki maatra KABHI nahi. Seene mein dard, saans ki takleef, behoshi,
   khoon aana jaise gambhir lakshan hon toh dawai ki baat chhod ke turant doctor/hospital jaane ko kaho.
+  SAWAAL KAISE SAMJHO: "kya main X le sakta hoon jab mujhe Y ho" / "can I use X when I have Y" ka matlab HAMESHA
+  yahi samjho: "kya X, Y ke ilaaj ke liye hai?". Jaise "i-Pill bukhaar mein le sakti hoon?" → (c): "Nahi, i-Pill
+  bukhaar ke liye nahi hai; yeh asurakshit sambhog ke baad garbh rokne ki dawai hai. Bukhaar ke liye doctor se
+  poochhein." "it / yeh / ise" ho toh pichhli baat wali dawai samjho aur jawab mein uska naam likho.
+  SURAKSHA KA FAISLA KABHI NAHI: "Y hote hue X lena safe hai?", "X aur Z saath le sakte hain?", "pregnancy /
+  BP / sugar mein X le sakte hain?" jaise sawaal pe kabhi "haan, koi asar nahi" ya "safe hai" mat kaho, aur
+  na hi "nahi, nuksaan karegi" jaisa faisla do. Bolo: "Yeh aapki sehat aur doosri dawaiyon pe nirbhar karta hai,
+  isliye doctor ya pharmacist se poochhein." Sirf (a)/(b)/(c) wali "kis kaam ki hai" baat batao.
 - Lekin NIJI salah kabhi mat do jab user ne koi dawai naam nahi li ("acidity hai, kaunsi dawai lun", "bukhaar hai
   kya lun"), ya dose poochhe ("kitni goli lun"). Aise sawaal pe (chuni hui bhasha mein) bolo:
   "Main dawai chunne mein salah nahi de sakta, kripya doctor se miliye."
@@ -323,12 +331,72 @@ def _numbers(text):
     return sorted(re.findall(r"\d+(?:\.\d+)?", digits))
 
 
+# ---------- Suraksha ka faisla: code se pakka rokna (har dawai ke liye) ----------
+# "Y hote hue X lena safe hai / koi asar nahi" jaisi baat AI kabhi na kahe: yeh niji medical faisla hai.
+# Prompt mein mana hai; phir bhi aa jaaye toh yahan pakda jaata hai, chahe dawai koi bhi ho.
+SAFETY_JUDGMENT = re.compile("|".join([
+    # English ("... safe or not" is our own neutral wording, so it is excluded)
+    r"\b(it is|it's|is) (completely |totally |generally |perfectly )?safe\b(?! or not)(?! for you or)",
+    r"\bsafe to (take|use|have)\b(?! or not)",
+    r"\bno (direct |known |major |serious |harmful )?(interaction|harm|problem|risk|effect)s?\b",
+    r"\bwon'?t (harm|affect|interact)",
+    # Hinglish: "koi (kuch bhi shabd) asar/nuksaan nahi"
+    r"\bkoi\b[^.!?\n]{0,40}?\b(asar|nuksaan|nuksan|dikkat|problem|takleef|interaction|khatra)\s+nahi",
+    r"\bsafe (hai|hain|hoti|hota)\b(?! ya nahi)", r"\bnuksaan nahi\b",
+    # Hindi
+    r"सुरक्षित (है|हैं|होती|होता)(?! या नहीं)",
+    r"कोई[^।.!?\n]{0,40}?(असर|नुकसान|नुक़सान|दिक्कत|समस्या|ख़तरा|खतरा) नहीं",
+    # Marathi
+    r"सुरक्षित आहे(?! की नाही)", r"(काही|कोणताही)[^।.!?\n]{0,30}?(परिणाम|धोका|त्रास|अपाय) (नाही|होत नाही)",
+]), re.IGNORECASE)
+SAFE_LINE = {
+    "Hinglish": "Yeh aapke liye safe hai ya nahi, yeh aapki sehat aur aap jo doosri dawaiyan le rahe hain un pe "
+                "nirbhar karta hai. Isliye kripya doctor ya pharmacist se poochhein.",
+    "Hindi": "यह आपके लिए सुरक्षित है या नहीं, यह आपकी सेहत और आप जो दूसरी दवाइयाँ ले रहे हैं उन पर निर्भर करता है। "
+             "इसलिए कृपया डॉक्टर या फार्मासिस्ट से पूछें।",
+    "English": "Whether this is safe for you depends on your health and any other medicines you take, "
+               "so please ask a doctor or pharmacist.",
+    "Marathi": "हे तुमच्यासाठी सुरक्षित आहे की नाही, हे तुमच्या आरोग्यावर आणि तुम्ही घेत असलेल्या इतर औषधांवर "
+               "अवलंबून आहे. म्हणून कृपया डॉक्टर किंवा फार्मासिस्टना विचारा.",
+}
+
+
+def judges_safety(answer):
+    # Hamari apni "safe hai ya nahi... doctor se poochhein" line ko galti se na pakdo
+    text = answer
+    for line in SAFE_LINE.values():
+        text = text.replace(line, "")
+    return bool(SAFETY_JUDGMENT.search(text))
+
+
+def remove_safety_judgment(answer, language):
+    """ Suraksha ka faisla hatao. Na ho paaye toh pakki, surakshit line (chuni hui bhasha mein). """
+    instruction = ("Rewrite the answer below. Remove EVERY statement that judges whether it is safe for this person "
+                   "to take the medicine (for example 'no interaction', 'it is safe', 'koi asar nahi'), and put this "
+                   f"sentence in its place: \"{SAFE_LINE.get(language, SAFE_LINE['Hinglish'])}\" "
+                   "Keep everything else, the same language, and every number exactly. Reply with only the answer.")
+    try:
+        fixed = llm_with_tools.invoke([SystemMessage(instruction), HumanMessage(answer)], with_tools=False).text.strip()
+        if fixed and not judges_safety(fixed) and _numbers(fixed) == _numbers(answer):
+            return fixed
+    except Exception as error:
+        print(f"   ⚠️ safety rewrite failed ({type(error).__name__})")
+    return SAFE_LINE.get(language, SAFE_LINE["Hinglish"])
+
+
 def check_language_node(state: DawaiState):
+    """ Aakhri jaanch, har jawab pe: 1) suraksha ka faisla nahi  2) sahi bhasha """
     language = state.get("language") or "Hinglish"
     last = state["messages"][-1]
     answer = last.text
-    if not answer.strip() or not wrong_language(answer, language):
+    if not answer.strip():
         return {}
+    if judges_safety(answer):
+        print("   🛡️ answer judged safety for the user; removing that")
+        answer = remove_safety_judgment(answer, language)
+        last = AIMessage(content=answer, id=last.id)
+    if not wrong_language(answer, language):
+        return {"messages": [last]} if answer != state["messages"][-1].text else {}
     instruction = (f"Rewrite the answer below in {TARGET[language]}. Keep the same meaning, order and length. "
                    "Keep every number, ₹ amount, % and km EXACTLY as written. Keep medicine names, salt names "
                    "and addresses as they are. Do not add or remove anything. Reply with only the rewritten answer.")
@@ -337,10 +405,10 @@ def check_language_node(state: DawaiState):
         fixed = reply.text.strip()
     except Exception as error:
         print(f"   ⚠️ language rewrite failed ({type(error).__name__}); keeping the original answer")
-        return {}
-    if not fixed or _numbers(fixed) != _numbers(answer) or wrong_language(fixed, language):
+        return {"messages": [last]} if answer != state["messages"][-1].text else {}
+    if not fixed or _numbers(fixed) != _numbers(answer) or wrong_language(fixed, language) or judges_safety(fixed):
         print("   ⚠️ language rewrite changed numbers or is still off; keeping the original answer")
-        return {}
+        return {"messages": [last]} if answer != state["messages"][-1].text else {}
     print(f"   🔤 answer rewritten in {language}")
     return {"messages": [AIMessage(content=fixed, id=last.id)]}       # same id: purane jawab ki jagah
 
