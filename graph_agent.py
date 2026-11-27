@@ -323,6 +323,8 @@ def wrong_language(answer, language):
         if language == "Marathi":
             return len(HINDI_WORDS.findall(answer)) > len(MARATHI_WORDS.findall(answer)) + 2   # Hindi likh di
         return False
+    if language == "English" and _roman_hindi_words(answer) >= 3:
+        return True                                        # English chuni, Hinglish likh di
     return share > 0.4                                     # Hinglish/English chuni, Devanagari mein likh diya
 
 
@@ -384,13 +386,94 @@ def remove_safety_judgment(answer, language):
     return SAFE_LINE.get(language, SAFE_LINE["Hinglish"])
 
 
+# ---------- "Kya main X le sakta hoon jab Y ho?": haan/nahi CODE tay karta hai ----------
+# AI sirf ek chhota sawaal jaanchta hai: "kya Y, X ka aam upyog hai?" (USE / NOT_USE / UNSURE).
+# Jawab ka faisla template se banta hai, taaki "haan, bukhaar mein i-Pill le sakti hain" jaisa galat haan
+# kisi bhi dawai ke liye na nikle.
+PERMISSION_QUESTION = re.compile("|".join([
+    r"\bcan (i|we|she|he|my \w+) (take|use|have|give)\b", r"\bis it (ok|okay|fine) to (take|use)\b",
+    r"\b(le|lele|kha|use kar|istemal kar)\s*(sakta|sakti|sakte)\b", r"\b(lu|loon|lun|le lu)\s*(kya)?\b.*\?",
+    r"ले\s*(सकता|सकती|सकते)", r"खा\s*(सकता|सकती|सकते)", r"घेऊ\s*(शकतो|शकते|शकता|शकतात)", r"वापरू\s*(शकतो|शकते)",
+]), re.IGNORECASE)
+SAYS_YES = re.compile(r"(^|\n)\s*\**\s*(haan|ha|han|yes|हाँ|हां|हो|होय)(?=[\s,.!:।*]|$)", re.IGNORECASE)
+NOT_FOR_IT = {
+    "Hinglish": "Nahi, {medicine} {condition} ke liye nahi hai; yeh {used_for} ke kaam aati hai. "
+                "{Condition} ke liye kripya doctor se poochhein.",
+    "English": "No, {medicine} is not meant for {condition}; it is used for {used_for}. "
+               "For {condition}, please ask a doctor.",
+    "Hindi": "नहीं, {medicine} {condition} के लिए नहीं है; यह {used_for} के काम आती है। "
+             "{Condition} के लिए कृपया डॉक्टर से पूछें।",
+    "Marathi": "नाही, {medicine} हे या त्रासावरचे औषध नाही: {condition}. ते यासाठी वापरले जाते: {used_for}. "
+               "या त्रासाबद्दल कृपया डॉक्टरांना विचारा.",
+}
+NOT_SURE = {
+    "Hinglish": "Main pakka nahi keh sakta ki yeh dawai is takleef ke liye hai ya nahi. "
+                "Kripya doctor ya pharmacist se poochhein.",
+    "English": "I can't say for sure whether this medicine is meant for this problem. "
+               "Please ask a doctor or pharmacist.",
+    "Hindi": "मैं पक्का नहीं कह सकता कि यह दवा इस तकलीफ़ के लिए है या नहीं। कृपया डॉक्टर या फार्मासिस्ट से पूछें।",
+    "Marathi": "हे औषध या त्रासासाठी आहे की नाही, हे मी खात्रीने सांगू शकत नाही. कृपया डॉक्टर किंवा फार्मासिस्टना विचारा.",
+}
+USE_CHECK = ("You check one fact for a medicine helper. In the conversation, the user asks whether they can take or use "
+             "a medicine while they have some condition or problem. Decide ONLY this: is that condition a normal, "
+             "standard use of that medicine (something it is made to treat or prevent)? Examples: Eno + acidity = USE; "
+             "paracetamol + fever = USE; i-Pill + fever = NOT_USE; Dolo 650 + acidity = NOT_USE. If you are not sure, "
+             "say UNSURE. Reply with ONLY one line of JSON: "
+             '{"verdict": "USE" | "NOT_USE" | "UNSURE", "medicine": "<medicine name>", '
+             '"condition": "<the condition>", "used_for": "<what the medicine is normally used for, few words>"}. '
+             'Write "condition" and "used_for" in {words}.')
+WORDS = {"Hinglish": "simple Hinglish (Hindi in Roman letters, e.g. 'bukhaar', 'garbh rokne')",
+         "English": "simple English", "Hindi": "simple Hindi in Devanagari", "Marathi": "simple Marathi in Devanagari"}
+
+
+def _last_question(state):
+    humans = [m for m in state["messages"] if m.type == "human"]
+    return humans[-1].text if humans else ""
+
+
+def permission_verdict(state, language="Hinglish"):
+    """ USE / NOT_USE / UNSURE + naam. AI na chale toh UNSURE (surakshit taraf). """
+    recent = [m for m in state["messages"] if m.type in ("human", "ai") and m.text.strip()][-5:]
+    convo = "\n".join(f"{'User' if m.type == 'human' else 'Helper'}: {m.text[:600]}" for m in recent)
+    try:
+        prompt = USE_CHECK.replace("{words}", WORDS.get(language, WORDS["Hinglish"]))
+        reply = llm_with_tools.invoke([SystemMessage(prompt), HumanMessage(convo)], with_tools=False).text
+        data = json.loads(re.search(r"\{.*\}", reply, re.S).group(0))
+        if data.get("verdict") in ("USE", "NOT_USE", "UNSURE"):
+            return data
+    except Exception as error:
+        print(f"   ⚠️ use check failed ({type(error).__name__}); treating as UNSURE")
+    return {"verdict": "UNSURE"}
+
+
+def check_permission(state, answer, language):
+    """ "Haan, le sakte ho" tabhi rehta hai jab Y sach mein X ka upyog ho. Warna template wala "nahi"/"pakka nahi". """
+    if not (PERMISSION_QUESTION.search(_last_question(state)) and SAYS_YES.search(answer)):
+        return answer
+    verdict = permission_verdict(state, language)
+    print(f"   🩺 can-I-use check: {verdict.get('verdict')} ({verdict.get('medicine')} / {verdict.get('condition')})")
+    if verdict["verdict"] == "USE":
+        return answer
+    lang = language if language in NOT_FOR_IT else "Hinglish"
+    if verdict["verdict"] == "NOT_USE" and all(verdict.get(k) for k in ("medicine", "condition", "used_for")):
+        condition = verdict["condition"].strip()
+        used_for = re.sub(r"\s+(के लिए|ke liye|for)\s*$", "", verdict["used_for"].strip())   # "…ke liye ke liye" nahi
+        return NOT_FOR_IT[lang].format(medicine=verdict["medicine"], condition=condition, used_for=used_for,
+                                       Condition=condition[:1].upper() + condition[1:])
+    return NOT_SURE[lang]
+
+
 def check_language_node(state: DawaiState):
-    """ Aakhri jaanch, har jawab pe: 1) suraksha ka faisla nahi  2) sahi bhasha """
+    """ Aakhri jaanch, har jawab pe: 1) galat "haan, le sakte ho" nahi  2) suraksha ka faisla nahi  3) sahi bhasha """
     language = state.get("language") or "Hinglish"
     last = state["messages"][-1]
     answer = last.text
     if not answer.strip():
         return {}
+    checked = check_permission(state, answer, language)
+    if checked != answer:
+        answer = checked
+        last = AIMessage(content=answer, id=last.id)
     if judges_safety(answer):
         print("   🛡️ answer judged safety for the user; removing that")
         answer = remove_safety_judgment(answer, language)
