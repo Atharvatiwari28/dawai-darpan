@@ -1,0 +1,33 @@
+{
+  "checks_passed": 10,
+  "checks_total": 10,
+  "cases_full_pass": 2,
+  "api_errors": 0,
+  "results": [
+    {
+      "id": "cofsils_honest_not_found",
+      "passed": 7,
+      "total": 7,
+      "failed": [],
+      "answer": "Maaf kijiye, is composition (2.4‑Dichlorobenzyl Alcohol 1.2 mg + Amylmetacresol 0.6 mg) ka Jan Aushadhi generic abhi hamare database mein nahi mila.  \n\nIske liye aap apne doctor ya pharmacist se salah lein.",
+      "tool_calls": [
+        {
+          "name": "search_by_salt",
+          "args": {
+            "composition": "2,4-Dichlorobenzyl Alcohol 1.2 mg + Amylmetacresol 0.6 mg",
+            "mrp": null,
+            "pack_count": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "source_not_revealed",
+      "passed": 3,
+      "total": 3,
+      "failed": [],
+      "answer": "Yeh jaankari hamare medicine database se hai. Pakki jaankari ke liye doctor ya chemist se zaroor poochein.",
+      "tool_calls": []
+    }
+  ]
+}

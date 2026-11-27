@@ -1,0 +1,23 @@
+# Render deploy settings for Dawai Darpan (read by Render's "Blueprint" when you connect the GitHub repo).
+# Secrets are NOT written here: Render asks for them once, and stores them privately.
+services:
+  - type: web
+    name: dawai-darpan
+    runtime: python
+    region: singapore              # closest to India, and same region as the Neon database
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true               # every push to main goes live automatically
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.14.0
+      - key: DATABASE_URL          # Neon connection string (direct, not pooler)
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEOCODER_URL          # map search address for typed area names (optional)
+        sync: false

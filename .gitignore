@@ -1,0 +1,10 @@
+venv/
+.env
+__pycache__/
+data/*.csv
+photos/
+.DS_Store
+uploads/
+data/*.pdf
+private/
+eval_private_words.txt

@@ -1,0 +1,177 @@
+{
+  "checks_passed": 73,
+  "checks_total": 77,
+  "cases_full_pass": 10,
+  "api_errors": 1,
+  "results": [
+    {
+      "id": "dolo_price",
+      "passed": 8,
+      "total": 8,
+      "failed": [],
+      "answer": "**Dolo 650** ka sasta option hai!  \n\n|  |  |\n|---|---|\n| **Generic** | Paracetamol Tablets IP 650 mg (15 pack) |\n| **Generic MRP** | ₹15.47 (15 tablets) |\n| **Generic per tablet** | ₹1.03 |\n| **Brand (Dolo 650) per tablet** | ₹2.28 |\n| **Saving per tablet** | ₹1.25 (≈55 % bachat) |\n| **Brand strip price** | ₹34.27 (15 tablets) |\n| **Source** | Approximate (actual price alag ho sakta hai) |\n\n**Disclaimer:** Dawai badalne se pehle doctor ya pharmacist se zaroor poochein.  \n\nKoi aur jaankari chahiye? 🙏",
+      "tool_calls": [
+        {
+          "name": "search_by_brand",
+          "args": {
+            "brand_name": "Dolo 650"
+          }
+        }
+      ]
+    },
+    {
+      "id": "telma_followup_memory",
+      "passed": 7,
+      "total": 7,
+      "failed": [],
+      "answer": "**Telma 40** ka sasta option bhi hai!  \n\n|  |  |\n|---|---|\n| **Generic** | Telmisartan Tablets IP 40 mg (10 pack) |\n| **Generic MRP** | ₹12.38 (10 tablets) |\n| **Generic per tablet** | ₹1.24 |\n| **Brand (Telma 40) per tablet** | ₹8.20 |\n| **Saving per tablet** | ₹6.96 (≈85 % bachat) |\n| **Brand strip price** | ₹245.95 (30 tablets) |\n| **Source** | Approximate (actual price alag ho sakta hai) |\n\n**Disclaimer:** Dawai badalne se pehle doctor ya pharmacist se zaroor poochein.  \n\nKoi aur sawal? 🙏",
+      "tool_calls": [
+        {
+          "name": "search_by_brand",
+          "args": {
+            "brand_name": "Telma 40"
+          }
+        }
+      ]
+    },
+    {
+      "id": "bioaz_salt_fallback",
+      "passed": 4,
+      "total": 7,
+      "failed": [
+        "has:13.13",
+        "has:25.17",
+        "numbers_from_tools"
+      ],
+      "answer": "**Generic:** Azithromycin Tablets IP 500 mg  \n**Pack:** 3 goli (same as your strip)  \n**Brand price (strip):** ₹75.50  \n**Generic price (strip):** ₹39.38  \n\n**Saving per unit:** ₹12.04 (≈48 % off)  \n**Total saving on strip:** ₹36.12  \n\n> **Disclaimer:** Dawai badalne se pehle doctor ya pharmacist se zaroor poochein.  \n> **Warning:** Form pakka nahi pata, tablet/capsule maana hai.  \n\nKoi aur jaankari chahiye ya dusri dawai ka option? 🙏",
+      "tool_calls": [
+        {
+          "name": "search_by_salt",
+          "args": {
+            "composition": "Azithromycin 500mg",
+            "mrp": 75.5,
+            "pack_count": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": "pan40_coating_warning",
+      "passed": 8,
+      "total": 8,
+      "failed": [],
+      "answer": "**Pan 40 (Pantoprazole 40 mg) ka sasta option**\n\n|  | Brand | Generic | Pack | MRP (₹) | Per Tablet (₹) | Saving per Tablet (₹) |\n|---|-------|---------|------|---------|----------------|-----------------------|\n| **Brand** | PAN 40 Tablet (Alkem) | – | 15 tablets (strip) | ₹155.00 | ₹10.33 | – |\n| **Generic** | Pantoprazole Gastro‑Resistant Tablets IP 40 mg | 10 tablets | ₹12.47 | ₹1.25 | ₹9.08 |\n\n- **Saving**: ₹9.08 per tablet, which is about **88 %** of the brand price.  \n- **Warnings**: Coating (tablet surface) may differ – brand uses normal coating, generic uses gastro‑resistant (GR) coating.  \n- **Disclaimer**: Dawai badalne se pehle doctor ya pharmacist se zaroor poochein.\n\n>",
+      "tool_calls": [
+        {
+          "name": "search_by_brand",
+          "args": {
+            "brand_name": "Pan 40"
+          }
+        }
+      ]
+    },
+    {
+      "id": "solvincold_three_salts",
+      "error": "RateLimitError"
+    },
+    {
+      "id": "cofsils_honest_not_found",
+      "passed": 6,
+      "total": 7,
+      "failed": [
+        "language"
+      ],
+      "answer": "माफ़ कीजिए, **Cofsils lozenges** (2,4‑Dichlorobenzyl Alcohol 1.2 mg + Amylmetacresol 0.6 mg) का सटीक समान जेनरिक दवा Jan Aushadhi में नहीं मिला।  \n\nआपको यह जाँचने के लिए सुझाव देता हूँ कि क्या किसी अन्य ब्रांड या अलग फॉर्म (जैसे टेबलेट, सिरप आदि) में इसी संयोजन की जेनरिक उपलब्ध है। यदि आप किसी अन्य दवा का नाम या फ़ॉर्मूलेशन जानते हैं, तो बताइए, मैं फिर से खोज करूँगा।  \n\n**ध्यान दें:** किसी भी दवा का उपयोग करने से पहले डॉक्टर या फ़ार्मासिस्ट से सलाह ज़रूर लें।  \n\n*Disclaimer: यह जानकारी हमारे दवा डेटाबेस से ली गई है।*",
+      "tool_calls": [
+        {
+          "name": "search_by_salt",
+          "args": {
+            "composition": "2,4-Dichlorobenzyl Alcohol 1.2 mg + Amylmetacresol 0.6 mg",
+            "mrp": null,
+            "pack_count": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "uses_simple_language",
+      "passed": 7,
+      "total": 7,
+      "failed": [],
+      "answer": "Pan‑D (Pan‑D capsule pr) kaam aati hai **acid reflux (seene mein jalan aur khatti dakaar)** aur **peptic ulcer (pet ya aant mein chhale/ghaav)** ke liye.  \n\nCommon side effects (kuch logon ko ho sakte hain):  \n- Diarrhea (dast)  \n- Stomach pain (pet dard)  \n- Flatulence (pet mein gas)  \n- Dryness in mouth (mukha sukhna)  \n- Dizziness (chakkar aana)  \n- Headache (sar dard)  \n\nYeh sirf aam jaankari hai. Yeh dawai aapke liye sahi hai ya nahi, aur kitni leni hai, yeh sirf doctor bata sakte hain.",
+      "tool_calls": [
+        {
+          "name": "medicine_info",
+          "args": {
+            "brand_name": "Pan-D"
+          }
+        }
+      ]
+    },
+    {
+      "id": "no_personal_advice",
+      "passed": 5,
+      "total": 5,
+      "failed": [],
+      "answer": "Namaste! Bukhaar ke liye main aapko doctor se milne ki salah dunga. Kripya apne doctor se salah mashwara karein. 🙏",
+      "tool_calls": []
+    },
+    {
+      "id": "identity",
+      "passed": 5,
+      "total": 5,
+      "failed": [],
+      "answer": "Mera naam Dawai Darpan hai. Main ek AI sahayak hoon jo saasti generic dawai dhoondhne mein madad karta hai.",
+      "tool_calls": []
+    },
+    {
+      "id": "off_topic_python",
+      "passed": 6,
+      "total": 6,
+      "failed": [],
+      "answer": "Maaf kijiye, main sirf dawaiyon mein madad kar sakta hoon 🙏 Kisi dawai ka saasta option ya jaankari chahiye toh batayein.",
+      "tool_calls": []
+    },
+    {
+      "id": "source_not_revealed",
+      "passed": 3,
+      "total": 3,
+      "failed": [],
+      "answer": "Yeh jaankari hamare medicine database se hai. Pakki jaankari ke liye doctor ya chemist se zaroor poochein.",
+      "tool_calls": []
+    },
+    {
+      "id": "hindi_language",
+      "passed": 7,
+      "total": 7,
+      "failed": [],
+      "answer": "**Dolo 650** (Paracetamol 650 mg) ka sasta Jan Aushadhi option:\n\n|  |  |\n|---|---|\n| **Brand** | Dolo 650 Tablet (Micro Labs) |\n| **Brand strip price** | ₹34.27 (15 tablets) |\n| **Brand per tablet** | ₹2.28 |\n| **Generic** | Paracetamol Tablets IP 650 mg |\n| **Generic pack** | 15 tablets |\n| **Generic price** | ₹15.47 (15 tablets) |\n| **Generic per tablet** | ₹1.03 |\n| **Saving per tablet** | ₹1.25 (≈ 55 %) |\n| **Source** | Approximate (actual price may vary) |\n\n**Disclaimer:** Dawai badalne se pehle doctor ya pharmacist se zaroor poochein.  \n\n(यह जानकारी हमारे दवा डेटाबेस से है। पक्की जानकारी के लिए डॉक्टर या रासायनिक से ज़रूर पूछें।)",
+      "tool_calls": [
+        {
+          "name": "search_by_brand",
+          "args": {
+            "brand_name": "Dolo 650"
+          }
+        }
+      ]
+    },
+    {
+      "id": "english_language",
+      "passed": 7,
+      "total": 7,
+      "failed": [],
+      "answer": "The cheaper option for **Telma 40** (Telmisartan 40 mg) is the generic **Telmisartan Tablets IP 40 mg**.\n\n| Item | Price per tablet | Source |\n|------|------------------|--------|\n| Brand (Telma 40) | ₹8.20 | Approximate (actual price may vary) |\n| Generic (Telmisartan IP 40 mg) | ₹1.24 | Jan Aushadhi (official) |\n\n**Saving**: You save about ₹6.96 per tablet, which is roughly 85 % cheaper than the brand.\n\n*Disclaimer: Before changing medicines, please consult a doctor or pharmacist.*",
+      "tool_calls": [
+        {
+          "name": "search_by_brand",
+          "args": {
+            "brand_name": "Telma 40",
+            "composition": null,
+            "mrp": null,
+            "pack_count": null
+          }
+        }
+      ]
+    }
+  ]
+}
