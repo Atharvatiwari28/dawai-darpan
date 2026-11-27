@@ -69,11 +69,14 @@ def _cleanup_photo(thread_id: str):
 
 
 def _suggestions(result: dict):
-    """ "Kya aapka matlab...?" wale naam: browser inhe tap karne wale buttons banayega """
+    """ "Kya aapka matlab...?" wale naam: browser inhe tap karne wale buttons banayega.
+    Sirf tab, jab jawab sach mein inmein se koi naam pooch raha ho (Eno ka jawab de diya → chips nahi). """
+    answer = (result.get("answer") or "").lower()
     names = []
     for r in result.get("tool_results", []):
         for n in r.get("did_you_mean") or []:
-            if n not in names:
+            first_word = n.split()[0].lower()
+            if n not in names and first_word in answer:
                 names.append(n)
     return names[:3]
 

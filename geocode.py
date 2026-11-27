@@ -21,7 +21,7 @@ URL = os.getenv("GEOCODER_URL")                 # not set: only the post office 
 HEADERS = {"User-Agent": "DawaiDarpan/1.0 (student project)"}
 TIMEOUT_SECONDS = 8
 MIN_GAP_SECONDS = 1.1
-MAX_TRIES = 3
+MAX_TRIES = 4
 
 # Words people add around a place name that confuse the map search
 FILLER_WORDS = {
@@ -135,12 +135,41 @@ def _search(query):
         if wait > 0:
             time.sleep(wait)
         _last_call[0] = time.monotonic()
-        params = {"q": query, "countrycodes": "in", "format": "jsonv2", "limit": 1,
+        params = {"q": query, "countrycodes": "in", "format": "jsonv2", "limit": 5,
                   "addressdetails": 1, "accept-language": "en"}
         response = requests.get(URL, params=params, headers=HEADERS, timeout=TIMEOUT_SECONDS)
     response.raise_for_status()
-    results = response.json()
-    return results[0] if results else None
+    return _best_match(response.json(), query)
+
+
+# Parts of an address that name the place itself (not the district or state around it)
+OWN_NAME_PARTS = ("suburb", "neighbourhood", "quarter", "city_district", "city", "town", "village",
+                  "hamlet", "road", "amenity", "shop", "building", "mall", "railway", "leisure")
+CITY_OR_SMALLER = 13          # map "place rank": 12 and below = district / state / country
+
+
+def _mentions(result, words):
+    """Does the result's OWN name contain what the user said? ('Navi Mumbai' is not 'Thane')"""
+    import difflib
+    address = result.get("address", {})
+    names = [result.get("name") or ""] + [address.get(k) or "" for k in OWN_NAME_PARTS]
+    keys = [sound_key(n) for n in names if n]
+    for word in words:
+        wk = sound_key(word)
+        if len(wk) >= 2 and any(wk in k or difflib.SequenceMatcher(None, wk, k).ratio() >= 0.8 for k in keys):
+            return True
+    return False
+
+
+def _best_match(results, query):
+    """Pick the result that IS the place the user named, preferring a city/town/area over a whole district."""
+    first_part = query.split(",")[0]
+    words = [w for w in re.split(r"\s+", first_part.lower()) if len(w) >= 3 and w not in FILLER_WORDS]
+    relevant = [r for r in results if _mentions(r, words)] if words else results
+    if not relevant:
+        return None                                   # nothing is really that place: try the next spelling
+    specific = [r for r in relevant if int(r.get("place_rank") or 30) >= CITY_OR_SMALLER]
+    return (specific or relevant)[0]
 
 
 def _label(result, query=""):
@@ -173,6 +202,7 @@ def _candidates(text):
         tries.append(cleaned)
     parts = [p.strip() for p in cleaned.split(",") if p.strip()]
     if len(parts) > 1:
+        tries.append(parts[0])                       # "Thane, Mumbai" -> "Thane" (the city hint can mislead)
         tries.append(", ".join(parts[-2:]))
     unique = []
     for t in tries:

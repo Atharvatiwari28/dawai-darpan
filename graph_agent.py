@@ -8,7 +8,7 @@ import re
 import difflib
 from dotenv import load_dotenv
 from langchain_core.tools import tool
-from langchain_core.messages import SystemMessage, AIMessage
+from langchain_core.messages import SystemMessage, AIMessage, HumanMessage
 from langchain_groq import ChatGroq
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import StateGraph, MessagesState, START, END
@@ -48,7 +48,7 @@ def make_llm(provider, model):
         timeout = 20 if model.endswith("lite") else 60
         llm = ChatGoogleGenerativeAI(model=model, google_api_key=os.getenv("GEMINI_API_KEY"),
                                      max_retries=0, timeout=timeout)   # Gemini 3.x apni sampling khud tay karta hai
-    return llm.bind_tools(TOOLS)
+    return llm
 
 
 def cooldown_seconds(error):
@@ -67,16 +67,17 @@ class ModelRouter:
         self.llms = {}
         self.resting_until = {}                 # model → kab tak skip karna hai
 
-    def invoke(self, messages):
+    def invoke(self, messages, with_tools=True):
         last_error = None
         for provider, model in MODELS:
             if time.time() < self.resting_until.get(model, 0):
                 continue                        # ⚡ aaram pe hai: bina intezaar ke agla
             if model not in self.llms:
-                self.llms[model] = make_llm(provider, model)
+                plain = make_llm(provider, model)
+                self.llms[model] = {"tools": plain.bind_tools(TOOLS), "plain": plain}
             start = time.time()
             try:
-                reply = self.llms[model].invoke(messages)
+                reply = self.llms[model]["tools" if with_tools else "plain"].invoke(messages)
                 print(f"   🤖 {model} ({time.time() - start:.1f}s)")
                 return reply
             except Exception as e:
@@ -137,7 +138,8 @@ Niyam:
 - Tool ke result mein 'warnings' ho toh har warning user ko zaroor batao.
 - Sirf utna batao jitna user ne poocha. Bina pooche dawai ka upyog ya side effects MAT batao.
 NAAM GALAT HO SAKTA HAI: tool ke result mein "did_you_mean" ho (aur woh khaali na ho), toh pehle user se
-poochho: "Kya aapka matlab in mein se koi hai: A, B ya C?" Khud se koi ek chun ke search MAT karo.
+poochho: "Kya aapka matlab in mein se koi hai: A, B ya C?" Khud se koi ek chun ke search MAT karo
+(chhoot sirf neeche wale "NAAM MEIN CHHOTI GALTI + SAAF SANDARBH" niyam mein).
 DATABASE MEIN NA HO TOH (sirf asli DAWAIYON ke liye, kisi aur cheez ke liye kabhi nahi):
 - Agar search_by_brand ya medicine_info "found: false" de, aur yeh pakka ek asli dawai hai:
   1) Agar tumhe uska salt aur strength PAKKA pata hai, toh search_by_salt chalao (salt_guessed_by_ai=true),
@@ -166,9 +168,24 @@ DATABASE MEIN NA HO TOH (sirf asli DAWAIYON ke liye, kisi aur cheez ke liye kabh
     "Flatulence" → "pet mein gas (Flatulence)"
   Sirf shabd aasaan karo: koi nayi bimari, naya fayda ya nayi salah apni taraf se MAT jodo.
   Chhote vaakya, aur "therapeutic class" jaise technical shabd zaroori na ho toh chhod do.
-- Lekin kisi insaan ko NIJI salah kabhi mat do: "mujhe kaunsi dawai leni chahiye", "kitni dose", "kya main yeh
-  le sakta hoon", "bukhaar hai kya lun". Aise sawaal pe (chuni hui bhasha mein) bolo:
+- "KYA MAIN X, Y KE LIYE LE SAKTA HOON?" (user ne dawai X aur takleef Y dono bataye, jaise "acidity mein Eno le
+  sakta hoon?"): yeh sawaal asal mein hai "kya X, Y ke liye bani hai?". medicine_info chalao (database mein na ho
+  toh apni aam jaankari, upar wale niyam se) aur seedha jawab do:
+  a) Y, X ka aam upyog hai, aur X bina parchi milne wali aam dawai hai (jaise Eno/Digene acidity, paracetamol
+     bukhaar, ORS dast): "Haan, X aam taur pe Y ke liye hi use hoti hai." Phir EK chhoti line: "Takleef baar-baar
+     ho, 2-3 din se zyada rahe, ya aap pregnant hain / koi aur bimari ki dawai le rahe hain, toh doctor se poochhein."
+  b) Y, X ka upyog hai, lekin X doctor ki parchi wali dawai hai (antibiotic, BP, sugar, dil, steroid, neend/dimaag
+     ki dawai, tez dard ki dawai, hormone): "X, Y mein di jaati hai, lekin yeh doctor ki parchi wali dawai hai:
+     ise sirf doctor ke kehne pe hi lein."
+  c) Y, X ka upyog NAHI hai: "Nahi, X, Y ke liye nahi bani; yeh Z ke kaam aati hai. Y ke liye doctor se poochhein."
+  Teeno mein: dose, kitni baar, kitne din, bachchon ki maatra KABHI nahi. Seene mein dard, saans ki takleef, behoshi,
+  khoon aana jaise gambhir lakshan hon toh dawai ki baat chhod ke turant doctor/hospital jaane ko kaho.
+- Lekin NIJI salah kabhi mat do jab user ne koi dawai naam nahi li ("acidity hai, kaunsi dawai lun", "bukhaar hai
+  kya lun"), ya dose poochhe ("kitni goli lun"). Aise sawaal pe (chuni hui bhasha mein) bolo:
   "Main dawai chunne mein salah nahi de sakta, kripya doctor se miliye."
+- NAAM MEIN CHHOTI GALTI + SAAF SANDARBH: naam thoda galat ho lekin sawaal se ek hi jaani-maani dawai saaf ho
+  ("acidity mein ego" → Eno), toh usi ka jawab do aur shuru mein bata do kya maana: "(Aapne 'ego' likha; main
+  maan raha hoon aap Eno ki baat kar rahe hain.)" Saaf na ho toh upar wala "Kya aapka matlab...?" niyam.
 - DAWAI KAHAN MILEGI: user pooche "kahan milegi / paas ka Kendra / kahan se khareedun", toh:
   user ne KOI BHI jagah batayi (pincode, area, mohalla, landmark, pata; kisi bhi lipi mein, adhoori bhi)
   → TURANT find_kendra chalao. "Thoda aur specific batayein" kehkar pehle mat poochho.
@@ -258,6 +275,81 @@ def quick_answer_node(state: DawaiState):
     return {"messages": [AIMessage(price_reply(result, state.get("language") or "Hinglish"))]}
 
 
+# ---------- Bhasha ki pakki jaanch (prompt ke bharose nahi) ----------
+# AI kabhi Hindi/Marathi chunne pe bhi Roman akshar mein, ya Marathi ki jagah Hindi mein likh deta hai.
+# Code jaanchta hai; galat ho toh EK baar sahi bhasha mein dobara likhwata hai, aur tabhi rakhta hai
+# jab saare number (₹, %, km) bilkul wahi rahein. Warna purana jawab hi rehta hai (accuracy pehle).
+DEVANAGARI_CHAR = re.compile(r"[\u0900-\u097F]")
+MARATHI_WORDS = re.compile(r"(आहे|आहेत|नाही|तुम्ही|तुमच्या|साठी|औषध|किंमत|आणि|मध्ये|करा|घ्या|जवळ)")
+HINDI_WORDS = re.compile(r"(है|हैं|नहीं|आप|आपके|के लिए|दवा|कीमत|और|में|करें|लें|पास)")
+TARGET = {
+    "Hindi": "Hindi, written ONLY in Devanagari script (हिंदी)",
+    "Marathi": "pure Marathi (मराठी, not Hindi), written ONLY in Devanagari script",
+    "Hinglish": "Hinglish: Hindi words written in Roman/English letters",
+    "English": "simple English",
+}
+
+
+def _devanagari_share(text):
+    letters = [c for c in text if c.isalpha()]
+    return sum(1 for c in letters if DEVANAGARI_CHAR.match(c)) / len(letters) if letters else 1.0
+
+
+# Hindi/Marathi ke aam shabd jab Roman akshar mein likhe hon (pate aur dawai ke naam mein yeh nahi hote)
+ROMAN_HINDI_MARATHI = {
+    "hai", "hain", "ke", "ka", "ki", "ko", "mein", "se", "yeh", "ye", "aur", "nahi", "paas", "liye", "aap",
+    "aapke", "aapko", "jaankari", "dawai", "daam", "hota", "hoti", "pe", "par", "sirf", "zaroor", "lagbhag",
+    "aahe", "aani", "ani", "je", "aushadh", "sathi", "kimat", "tumhi", "nahi", "aahet", "madhye",
+}
+
+
+def _roman_hindi_words(text):
+    return sum(1 for w in re.findall(r"[a-z]+", text.lower()) if w in ROMAN_HINDI_MARATHI)
+
+
+def wrong_language(answer, language):
+    share = _devanagari_share(answer)
+    if language in ("Hindi", "Marathi"):
+        if _roman_hindi_words(answer) >= 3:
+            return True                                    # Roman akshar mein likh diya
+        if language == "Marathi":
+            return len(HINDI_WORDS.findall(answer)) > len(MARATHI_WORDS.findall(answer)) + 2   # Hindi likh di
+        return False
+    return share > 0.4                                     # Hinglish/English chuni, Devanagari mein likh diya
+
+
+def _numbers(text):
+    digits = text.translate(str.maketrans("०१२३४५६७८९", "0123456789"))
+    return sorted(re.findall(r"\d+(?:\.\d+)?", digits))
+
+
+def check_language_node(state: DawaiState):
+    language = state.get("language") or "Hinglish"
+    last = state["messages"][-1]
+    answer = last.text
+    if not answer.strip() or not wrong_language(answer, language):
+        return {}
+    instruction = (f"Rewrite the answer below in {TARGET[language]}. Keep the same meaning, order and length. "
+                   "Keep every number, ₹ amount, % and km EXACTLY as written. Keep medicine names, salt names "
+                   "and addresses as they are. Do not add or remove anything. Reply with only the rewritten answer.")
+    try:
+        reply = llm_with_tools.invoke([SystemMessage(instruction), HumanMessage(answer)], with_tools=False)
+        fixed = reply.text.strip()
+    except Exception as error:
+        print(f"   ⚠️ language rewrite failed ({type(error).__name__}); keeping the original answer")
+        return {}
+    if not fixed or _numbers(fixed) != _numbers(answer) or wrong_language(fixed, language):
+        print("   ⚠️ language rewrite changed numbers or is still off; keeping the original answer")
+        return {}
+    print(f"   🔤 answer rewritten in {language}")
+    return {"messages": [AIMessage(content=fixed, id=last.id)]}       # same id: purane jawab ki jagah
+
+
+def route_after_agent(state: DawaiState):
+    """ 🔀 Tool maanga → tools; jawab taiyar → bhasha jaanch """
+    return "tools" if getattr(state["messages"][-1], "tool_calls", None) else "check_language"
+
+
 # 3. Graph banao: dabbe (nodes) + teer (edges)
 builder = StateGraph(DawaiState)
 builder.add_node("choose_language", choose_language_node)
@@ -265,7 +357,9 @@ builder.add_node("agent", agent_node)
 builder.add_node("tools", ToolNode(TOOLS))      # tool chalane wala ready-made node
 builder.add_conditional_edges(START, route_start, ["choose_language", "agent"])
 builder.add_edge("choose_language", "agent")
-builder.add_conditional_edges("agent", tools_condition)   # tool maanga → "tools", warna → END
+builder.add_node("check_language", check_language_node)
+builder.add_conditional_edges("agent", route_after_agent, ["tools", "check_language"])
+builder.add_edge("check_language", END)
 builder.add_node("quick_answer", quick_answer_node)
 builder.add_conditional_edges("tools", route_after_tools, ["agent", "quick_answer"])   # ⚡ shortcut
 builder.add_edge("quick_answer", END)

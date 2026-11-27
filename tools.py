@@ -270,14 +270,15 @@ if __name__ == "__main__":
         print("-" * 50)
 
 
-def find_kendra(place: str) -> dict:
+def find_kendra(place: str, how_many: int = 5) -> dict:
     """User ke paas ke Jan Aushadhi Kendra (dukaan) dhoondho: pata aur doori.
     Tab chalao jab user pooche ki saasti generic dawai KAHAN milegi / paas ka Kendra / kahan se khareedein.
     place = user ki batayi jagah, ENGLISH akshar mein jaisa map pe likha hota hai: 6 ankon ka pincode, ya
     area/pata + shahar (jaise "Wadgaon Sheri, Pune"). Awaaz ki galat spelling sudhaar sakte ho, jagah wahi rakho.
-    Khud se pincode ya shahar KABHI mat banao. User ne koi jagah nahi batayi toh yeh tool MAT chalao, pehle poochho."""
+    Khud se pincode ya shahar KABHI mat banao. User ne koi jagah nahi batayi toh yeh tool MAT chalao, pehle poochho.
+    how_many = user ne jitne Kendra maange (jaise "10 Kendra batao" → 10); na bataye toh 5. Zyada se zyada 10."""
     from kendra import kendras_near_place
-    answer = kendras_near_place(place, limit=5)
+    answer = kendras_near_place(place, limit=max(1, min(int(how_many or 5), 10)))
     if answer.get("found"):
         answer["same_price_everywhere"] = ("Jan Aushadhi ka daam har Kendra pe ek jaisa hai, isliye sabse paas "
                                            "wala Kendra hi sabse sasta padega.")

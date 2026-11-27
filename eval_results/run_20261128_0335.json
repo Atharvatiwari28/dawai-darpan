@@ -1,0 +1,31 @@
+{
+  "checks_passed": 13,
+  "checks_total": 13,
+  "api_errors": 0,
+  "results": [
+    {
+      "id": "eno_acidity_yes_typo",
+      "passed": 7,
+      "total": 7,
+      "failed": [],
+      "answer": "(Aapne “ego” likha; main maan raha hoon aap **Eno** ki baat kar rahe hain.)  \n\nHaan, **Eno** aam taur pe acidity (pet ki jalan) ke liye hi li jaati hai.  \n\nAgar acidity baar‑baar ho, 2‑3 din se zyada rahe, ya aap pregnant hain / koi aur dawa le rahe hain, toh doctor se poochhein. 🙏",
+      "tool_calls": []
+    },
+    {
+      "id": "eno_acidity_marathi",
+      "passed": 6,
+      "total": 6,
+      "failed": [],
+      "answer": "होय, Eno आम्लपित्त (Acidity) किंवा छातीत जळजळ आणि आंबट ढेकर येणे यावर वापरले जाते आणि हे विना प्रिस्क्रिप्शन मिळणारे सामान्य औषध आहे.\n\nही माहिती आमच्या मेडिसिन डेटाबेस मधून नाही, तर माझ्या सामान्य माहितीवरून आहे.\n\nपण जर ही समस्या वारंवार होत असेल, २-३ दिवसांपेक्षा जास्त राहत असेल, किंवा तुम्ही गर्भवती असाल किंवा इतर कोणत्याही आजाराचे औषध घेत असाल, तर कृपया डॉक्टरांचा सल्ला घ्या.",
+      "tool_calls": [
+        {
+          "name": "medicine_info",
+          "args": {
+            "brand_name": "Eno",
+            "include_side_effects": false
+          }
+        }
+      ]
+    }
+  ]
+}
